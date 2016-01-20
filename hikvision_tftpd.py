@@ -2,7 +2,7 @@
 """
 Unbrick a Hikvision device. Use as follows:
 
-$ ifconfig eth0:0 192.0.0.128
+$ sudo ifconfig eth0:0 192.0.0.128
 $ curl -o digicap.dav <url of firmware>
 $ sudo ./hikvision_tftpd.py
 
