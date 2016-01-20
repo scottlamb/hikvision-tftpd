@@ -72,7 +72,7 @@ def tftp_after(sock, file_contents, prev_block, addr):
     now = time.strftime('%F %T')
     print '%s: sending block %d (%d bytes%s)' % (
         now, block, len(block_data),
-        ', done' if len(block_data < _BLOCK_SIZE else '')
+        ', done' if len(block_data) < _BLOCK_SIZE else '')
 
 def tftp_loop(sock, file_contents):
     # TODO: This should retry DATA if an ACK isn't received soon enough.
