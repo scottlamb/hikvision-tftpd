@@ -41,7 +41,6 @@ _HANDSHAKE_SERVER_ADDR = (_SERVER_IP, 9978)
 _TFTP_SERVER_ADDR = (_SERVER_IP, 69)
 _FILENAME = 'digicap.dav'
 _TIME_FMT = '%T'
-_PROGRESS_WIDTH = 50
 
 
 class Error(Exception): pass
@@ -132,10 +131,6 @@ class Server(object):
         elif pkt.startswith(self._TFTP_ACK_PREFIX):
             (block,) = struct.unpack(
                 '>H', pkt[len(self._TFTP_ACK_PREFIX):])
-
-            print '%s: acked %5d / %5d %s' % (
-                    now, block, self._total_blocks,
-                    '*' * (_PROGRESS_WIDTH * block // self._total_blocks))
             self._tftp_maybe_send(block, addr)
         else:
             print '%s: received unexpected bytes %r from %s:%d' % (
@@ -145,14 +140,14 @@ class Server(object):
         block = prev_block + 1
         start_byte = prev_block * self.BLOCK_SIZE
         if start_byte > len(self._file_contents):
+            print '%s: done!' % time.strftime(_TIME_FMT)
             return
         block_data = self._file_contents[start_byte:start_byte+self.BLOCK_SIZE]
         pkt = (struct.pack('>hH', self._TFTP_OPCODE_DATA, block) + block_data)
         self._tftp_sock.sendto(pkt, addr)
-        now = time.strftime(_TIME_FMT)
-        print '%s: block %5d / %5d %s' % (
-                now, block, self._total_blocks,
-                '*' * (_PROGRESS_WIDTH * block // self._total_blocks))
+        print '%s: %5d / %5d [%s]' % (
+                time.strftime(_TIME_FMT), block, self._total_blocks,
+                '#' * (53 * block // self._total_blocks))
 
 
 if __name__ == '__main__':
