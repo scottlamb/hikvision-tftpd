@@ -129,13 +129,7 @@ class Server(object):
                 now, pkt.encode('hex'), addr[0], addr[1])
 
     def _tftp_read(self):
-        try:
-            pkt, addr = self._tftp_sock.recvfrom(65536)
-        except socket.error, e:
-            if e.errno == e.ENOTCONN:
-                # socket was shutdown, as in shutdown().
-                return
-            raise
+        pkt, addr = self._tftp_sock.recvfrom(65536)
         now = time.strftime(_TIME_FMT)
         if pkt.startswith(self._TFTP_RRQ_PREFIX):
             print '%s: starting transfer' % now
