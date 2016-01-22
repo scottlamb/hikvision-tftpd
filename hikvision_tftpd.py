@@ -164,7 +164,7 @@ if __name__ == '__main__':
         server = Server(_HANDSHAKE_SERVER_ADDR, _TFTP_SERVER_ADDR,
                         file_contents)
     except Error, e:
-        print 'Error: %s' % e.strerror
+        print 'Error: %s' % e.message
         sys.exit(1)
 
     server.run_forever()
