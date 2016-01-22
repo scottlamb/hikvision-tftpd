@@ -67,7 +67,7 @@ def tftp_after(sock, file_contents, prev_block, addr):
     if start_byte > len(file_contents):
         return
     block_data = file_contents[start_byte:start_byte+_BLOCK_SIZE]
-    pkt = (struct.pack('>hh', _TFTP_OPCODE_DATA, block) + block_data)
+    pkt = (struct.pack('>hH', _TFTP_OPCODE_DATA, block) + block_data)
     sock.sendto(pkt, addr)
     now = time.strftime('%F %T')
     print '%s: sending block %d (%d bytes%s)' % (
@@ -84,7 +84,7 @@ def tftp_loop(sock, file_contents):
             print '%s: starting transfer' % now
             tftp_after(sock, file_contents, 0, addr)
         elif pkt.startswith(_TFTP_ACK_PREFIX):
-            (block,) = struct.unpack('>h', pkt[len(_TFTP_ACK_PREFIX):])
+            (block,) = struct.unpack('>H', pkt[len(_TFTP_ACK_PREFIX):])
             print '%s: received acknowledgement for block %d' % (now, block)
             tftp_after(sock, file_contents, block, addr)
         else:
@@ -122,9 +122,13 @@ except IOError, e:
         print 'Please download/move it to the current working directory.'
         sys.exit(1)
     raise
+
+_TOTAL_BLOCKS = (len(file_contents) + _BLOCK_SIZE) // _BLOCK_SIZE
+if _TOTAL_BLOCKS > 65535:
+  print 'Error: file is too big to serve with %d-byte blocks.' % _BLOCK_SIZE
+  sys.exit(1)
 print 'Serving %d-byte %s (block size %d, %d blocks)' % (
-    len(file_contents), _FILENAME, _BLOCK_SIZE,
-    (len(file_contents) + _BLOCK_SIZE) // _BLOCK_SIZE)
+    len(file_contents), _FILENAME, _BLOCK_SIZE, _TOTAL_BLOCKS)
 
 handshake_thread = threading.Thread(target=handshake_loop,
                                     args=(handshake_sock,))
