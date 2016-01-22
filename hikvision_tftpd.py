@@ -2,9 +2,20 @@
 """
 Unbrick a Hikvision device. Use as follows:
 
-$ sudo ifconfig eth0:0 192.0.0.128
-$ curl -o digicap.dav <url of firmware>
-$ sudo ./hikvision_tftpd.py
+Setup the expected IP address:
+
+    linux$ sudo ifconfig eth0:0 192.0.0.128
+    osx$   sudo ifconfig en0 alias 192.0.0.128 255.255.255.0
+
+Download the firmware to use:
+
+    $ curl -o digicap.dav <url of firmware>
+
+Run the script:
+
+    $ sudo ./hikvision_tftpd.py
+
+Hit ctrl-C when done.
 
 The Hikvision TFTP handshake (for both cameras and NVRs) is stupid but easy
 enough. The client uses the address 192.0.0.64 and expects a TFTP server
@@ -76,8 +87,9 @@ class Server(object):
                 raise Error(
                     ('Address %s:%d not available.\n\n'
                      'Try running:\n'
-                     'linux$ ifconfig eth0:0 192.0.0.64\n'
-                     'osx$   ifconfig en0 alias 192.0.0.64 255.255.255.0\n\n'
+                     'linux$ sudo ifconfig eth0:0 192.0.0.128\n'
+                     'osx$   sudo ifconfig en0 alias 192.0.0.128 '
+                     '255.255.255.0\n\n'
                      '(adjust eth0 or en0 to taste. see "ifconfig -a" output)')
                     % addr)
             if e.errno == errno.EADDRINUSE:
@@ -145,9 +157,11 @@ class Server(object):
         block_data = self._file_contents[start_byte:start_byte+self.BLOCK_SIZE]
         pkt = (struct.pack('>hH', self._TFTP_OPCODE_DATA, block) + block_data)
         self._tftp_sock.sendto(pkt, addr)
-        print '%s: %5d / %5d [%s]' % (
+        _progress_width = 53
+        print '%s: %5d / %5d [%-*s]' % (
                 time.strftime(_TIME_FMT), block, self._total_blocks,
-                '#' * (53 * block // self._total_blocks))
+                _progress_width,
+                '#' * (_progress_width * block // self._total_blocks))
 
 
 if __name__ == '__main__':

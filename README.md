@@ -1,8 +1,19 @@
 Unbrick a Hikvision device. Use as follows:
 
-    $ sudo ifconfig eth0:0 192.0.0.128
+Setup the expected IP address:
+
+    linux$ sudo ifconfig eth0:0 192.0.0.128
+    osx$   sudo ifconfig en0 alias 192.0.0.128 255.255.255.0
+
+Download the firmware to use:
+
     $ curl -o digicap.dav <url of firmware>
+
+Run the script:
+
     $ sudo ./hikvision_tftpd.py
+
+Hit ctrl-C when done.
 
 The Hikvision TFTP handshake (for both cameras and NVRs) is stupid but easy
 enough. The client uses the address 192.0.0.64 and expects a TFTP server
