@@ -51,7 +51,7 @@ _SERVER_IP = '192.0.0.128'
 _HANDSHAKE_SERVER_ADDR = (_SERVER_IP, 9978)
 _TFTP_SERVER_ADDR = (_SERVER_IP, 69)
 _FILENAME = 'digicap.dav'
-_TIME_FMT = '%T'
+_TIME_FMT = '%c'
 
 
 class Error(Exception): pass
@@ -160,7 +160,7 @@ class Server(object):
 
 if __name__ == '__main__':
     try:
-        file_contents = open(_FILENAME, 'r').read()
+        file_contents = open(_FILENAME, mode='rb').read()
     except IOError, e:
         print 'Error: can\'t read %s' % _FILENAME
         if e.errno == errno.ENOENT:
