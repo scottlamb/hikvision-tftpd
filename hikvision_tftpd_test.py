@@ -78,7 +78,8 @@ class TftpdTest(unittest.TestCase):
             self.assertTrue('not available' in e.message, 'Unexpected: %r' % e)
         else:
             self.fail('expected an error')
-	# No skip check for user root on Windows Platform
+	
+	# Skip check for user root not relevant on Windows Platform
     @unittest.skipIf(sys.platform.startswith("win"), "Skip check for root permissions on Windows")
     def test_eaccess(self):
         try:
