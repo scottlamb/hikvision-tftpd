@@ -79,7 +79,7 @@ class TftpdTest(unittest.TestCase):
         else:
             self.fail('expected an error')
 	# No skip check for user root on Windows Platform
-    @unittest.skipIf(sys.platform.startswith("win"), "requires Windows")
+    @unittest.skipIf(sys.platform.startswith("win"), "Skip check for root permissions on Windows")
     def test_eaccess(self):
         try:
             hikvision_tftpd.Server(('127.0.0.1', 1), ('127.0.0.1', 3), '')
