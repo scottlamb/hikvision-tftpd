@@ -10,6 +10,8 @@ import hikvision_tftpd
 import socket
 import string
 import unittest
+import platform
+import sys
 
 
 class TftpdTest(unittest.TestCase):
@@ -76,16 +78,17 @@ class TftpdTest(unittest.TestCase):
             self.assertTrue('not available' in e.message, 'Unexpected: %r' % e)
         else:
             self.fail('expected an error')
-
+	
+	# Skip check for user root not relevant on Windows Platform
+    @unittest.skipIf(sys.platform.startswith("win"), "Skip check for root permissions on Windows")
     def test_eaccess(self):
         try:
-            # The test shouldn't be running as root.
             hikvision_tftpd.Server(('127.0.0.1', 1), ('127.0.0.1', 3), '')
         except hikvision_tftpd.Error, e:
             self.assertTrue('permission' in e.message, 'Unexpected: %r' % e)
         else:
             self.fail('expected an error. '
-                      '(did you run the tests as root? don\'t.)')
+					  '(did you run the tests as root? don\'t.)')
 
 
     def test_proper_handshake(self):
