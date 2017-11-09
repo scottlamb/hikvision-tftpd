@@ -1,35 +1,6 @@
 #!/usr/bin/env python
 """
-Unbrick a Hikvision device. Use as follows:
-
-Setup the expected IP address:
-
-    linux$ sudo ifconfig eth0:0 192.0.0.128
-    osx$   sudo ifconfig en0 alias 192.0.0.128 255.255.255.0
-
-Download the firmware to use:
-
-    $ curl -o digicap.dav <url of firmware>
-
-Run the script:
-
-    $ sudo ./hikvision_tftpd.py
-
-Hit ctrl-C when done.
-
-The Hikvision TFTP handshake (for both cameras and NVRs) is stupid but easy
-enough. The client uses the address 192.0.0.64 and expects a TFTP server
-running on address 192.0.0.128. It sends a particular packet to the server's
-port 9978 from the client port 9979 and expects the server to echo it back.
-Once that happens, it proceeds to send a tftp request (on the standard tftp
-port, 69) for the file "digicap.dav", which it then installs. The tftp server
-must reply from port 69 (unlike the tftpd package that comes with Debian).
-
-This script handles both the handshake and the actual TFTP transfer.
-The TFTP server is very simple but appears to be good enough.
-
-See discussion thread:
-https://www.ipcamtalk.com/showthread.php/3647-Hikvision-DS-2032-I-Console-Recovery
+Unbrick a Hikvision device. See README.md for usage information.
 """
 
 from __future__ import division
@@ -38,6 +9,7 @@ __author__ = 'Scott Lamb'
 __license__ = 'MIT'
 __email__ = 'slamb@slamb.org'
 
+import argparse
 import errno
 import os
 import select
@@ -47,10 +19,8 @@ import sys
 import time
 
 HANDSHAKE_BYTES = struct.pack('20s', 'SWKH')
-_SERVER_IP = '192.0.0.128'
-_HANDSHAKE_SERVER_ADDR = (_SERVER_IP, 9978)
-_TFTP_SERVER_ADDR = (_SERVER_IP, 69)
-_FILENAME = 'digicap.dav'
+_HANDSHAKE_SERVER_PORT = 9978
+_TFTP_SERVER_PORT = 69
 _TIME_FMT = '%c'
 
 
@@ -62,21 +32,22 @@ class Server(object):
     _TFTP_OPCODE_RRQ = 1
     _TFTP_OPCODE_DATA = 3
     _TFTP_OPCODE_ACK = 4
-    _TFTP_RRQ_PREFIX = struct.pack('>h', _TFTP_OPCODE_RRQ) + _FILENAME + '\x00'
     _TFTP_ACK_PREFIX = struct.pack('>h', _TFTP_OPCODE_ACK)
     BLOCK_SIZE = 512
 
-    def __init__(self, handshake_addr, tftp_addr, file_contents):
+    def __init__(self, handshake_addr, tftp_addr, filename, file_contents):
         self._file_contents = file_contents
         self._total_blocks = ((len(file_contents) + self.BLOCK_SIZE)
                               // self.BLOCK_SIZE)
+        self._tftp_rrq_prefix = (struct.pack('>h', self._TFTP_OPCODE_RRQ) +
+                                 filename + '\x00')
         if self._total_blocks > 65535:
             raise Error('File is too big to serve with %d-byte blocks.'
                         % self.BLOCK_SIZE)
         self._handshake_sock = self._bind(handshake_addr)
         self._tftp_sock = self._bind(tftp_addr)
         print 'Serving %d-byte %s (block size %d, %d blocks)' % (
-            len(file_contents), _FILENAME, self.BLOCK_SIZE, self._total_blocks)
+            len(file_contents), filename, self.BLOCK_SIZE, self._total_blocks)
 
     def _bind(self, addr):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -87,11 +58,11 @@ class Server(object):
                 raise Error(
                     ('Address %s:%d not available.\n\n'
                      'Try running:\n'
-                     'linux$ sudo ifconfig eth0:0 192.0.0.128\n'
-                     'osx$   sudo ifconfig en0 alias 192.0.0.128 '
+                     'linux$ sudo ifconfig eth0:0 %s\n'
+                     'osx$   sudo ifconfig en0 alias %s '
                      '255.255.255.0\n\n'
                      '(adjust eth0 or en0 to taste. see "ifconfig -a" output)')
-                    % addr)
+                    % (addr[0], addr[1], addr[0], addr[0]))
             if e.errno == errno.EADDRINUSE:
                 raise Error(
                     ('Address %s:%d in use.\n'
@@ -125,13 +96,13 @@ class Server(object):
             self._handshake_sock.sendto(pkt, addr)
             print '%s: Replied to magic handshake request.' % now
         else:
-            print '%s: received unexpected bytes %r from %s:%d' % (
+            print '%s: received unexpected handshake bytes %r from %s:%d' % (
                 now, pkt.encode('hex'), addr[0], addr[1])
 
     def _tftp_read(self):
         pkt, addr = self._tftp_sock.recvfrom(65536)
         now = time.strftime(_TIME_FMT)
-        if pkt.startswith(self._TFTP_RRQ_PREFIX):
+        if pkt.startswith(self._tftp_rrq_prefix):
             print '%s: starting transfer' % now
             self._tftp_maybe_send(0, addr)
         elif pkt.startswith(self._TFTP_ACK_PREFIX):
@@ -139,7 +110,7 @@ class Server(object):
                 '>H', pkt[len(self._TFTP_ACK_PREFIX):])
             self._tftp_maybe_send(block, addr)
         else:
-            print '%s: received unexpected bytes %r from %s:%d' % (
+            print '%s: received unexpected tftp bytes %r from %s:%d' % (
                 now, pkt.encode('hex'), addr[0], addr[1])
 
     def _tftp_maybe_send(self, prev_block, addr):
@@ -159,18 +130,26 @@ class Server(object):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--filename', default='digicap.dav',
+                        help='file to serve; used both to read from the local '
+                             'disk and for the filename to expect from client')
+    parser.add_argument('--server-ip', default='192.0.0.128',
+                        help='IP address to serve from.')
+    args = parser.parse_args()
     try:
-        file_contents = open(_FILENAME, mode='rb').read()
+        file_contents = open(args.filename, mode='rb').read()
     except IOError, e:
-        print 'Error: can\'t read %s' % _FILENAME
+        print 'Error: can\'t read %s' % args.filename
         if e.errno == errno.ENOENT:
             print 'Please download/move it to the current working directory.'
             sys.exit(1)
         raise
 
     try:
-        server = Server(_HANDSHAKE_SERVER_ADDR, _TFTP_SERVER_ADDR,
-                        file_contents)
+        server = Server((args.server_ip, _HANDSHAKE_SERVER_PORT),
+                        (args.server_ip, _TFTP_SERVER_PORT),
+                        args.filename, file_contents)
     except Error, e:
         print 'Error: %s' % e.message
         sys.exit(1)

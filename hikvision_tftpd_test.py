@@ -34,7 +34,7 @@ class TftpdTest(unittest.TestCase):
 
     def _setup(self, data):
         self._server = hikvision_tftpd.Server(
-                ('127.0.0.1', 0), ('127.0.0.1', 0), data)
+                ('127.0.0.1', 0), ('127.0.0.1', 0), 'digicap.dav', data)
         self._handshake_client = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM)
         self._handshake_client.connect(
@@ -61,7 +61,7 @@ class TftpdTest(unittest.TestCase):
         try:
             hikvision_tftpd.Server(self._server._handshake_sock.getsockname(),
                                    self._server._tftp_sock.getsockname(),
-                                   '')
+                                   'digicap.dav', '')
         except hikvision_tftpd.Error, e:
             self.assertTrue('in use' in e.message, 'Unexpected: %r' % e)
         else:
@@ -73,7 +73,8 @@ class TftpdTest(unittest.TestCase):
             # The local machine shouldn't have such an IP address.
             # (Okay, according to the RFCs, it shouldn't be using 192.0.0.128
             # either, but we do what we must.)
-            hikvision_tftpd.Server(('192.0.2.1', 0), ('192.0.2.1', 0), '')
+            hikvision_tftpd.Server(('192.0.2.1', 0), ('192.0.2.1', 0),
+                                   'digicap.dav', '')
         except hikvision_tftpd.Error, e:
             self.assertTrue('not available' in e.message, 'Unexpected: %r' % e)
         else:
@@ -84,7 +85,8 @@ class TftpdTest(unittest.TestCase):
                      'Skip check for root permissions on Windows')
     def test_eaccess(self):
         try:
-            hikvision_tftpd.Server(('127.0.0.1', 1), ('127.0.0.1', 3), '')
+            hikvision_tftpd.Server(('127.0.0.1', 1), ('127.0.0.1', 3),
+                                   'digicap.dav', '')
         except hikvision_tftpd.Error, e:
             self.assertTrue('permission' in e.message, 'Unexpected: %r' % e)
         else:
