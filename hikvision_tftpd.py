@@ -32,18 +32,18 @@ class Server(object):
     _TFTP_OPCODE_RRQ = 1
     _TFTP_OPCODE_DATA = 3
     _TFTP_OPCODE_ACK = 4
+    _TFTP_OPCODE_OACK = 6
     _TFTP_ACK_PREFIX = struct.pack('>h', _TFTP_OPCODE_ACK)
     BLOCK_SIZE = 512
 
     def __init__(self, handshake_addr, tftp_addr, filename, file_contents):
         self._file_contents = file_contents
+        self._filename = filename
         self._total_blocks = ((len(file_contents) + self.BLOCK_SIZE)
                               // self.BLOCK_SIZE)
         self._tftp_rrq_prefix = (struct.pack('>h', self._TFTP_OPCODE_RRQ) +
                                  filename + '\x00')
-        if self._total_blocks > 65535:
-            raise Error('File is too big to serve with %d-byte blocks.'
-                        % self.BLOCK_SIZE)
+        self._tftp_blksize_option = ('blksize' + '\x00')
         self._handshake_sock = self._bind(handshake_addr)
         self._tftp_sock = self._bind(tftp_addr)
         print 'Serving %d-byte %s (block size %d, %d blocks)' % (
@@ -72,6 +72,17 @@ class Server(object):
                              'Try running with sudo.') % addr)
             raise
         return sock
+
+    def set_block_size(self, block_size):
+        print 'Setting block size to %d' % block_size
+        self.BLOCK_SIZE = block_size
+        self._total_blocks = ((len(self._file_contents) + self.BLOCK_SIZE)
+                              // self.BLOCK_SIZE)
+        if self._total_blocks > 65535:
+            raise Error('File is too big to serve with %d-byte blocks.'
+                        % self.BLOCK_SIZE)
+        print 'Serving %d-byte %s (block size %d, %d blocks)' % (
+            len(self._file_contents), self._filename, self.BLOCK_SIZE, self._total_blocks)
 
     def close(self):
         self._handshake_sock.close()
@@ -102,7 +113,14 @@ class Server(object):
     def _tftp_read(self):
         pkt, addr = self._tftp_sock.recvfrom(65536)
         now = time.strftime(_TIME_FMT)
-        if pkt.startswith(self._tftp_rrq_prefix):
+        if pkt.startswith(self._tftp_rrq_prefix) and pkt.find(self._tftp_blksize_option) != -1:
+            options = pkt.split('\x00')
+            blksize_index = options.index('blksize')
+            blksize = options[blksize_index + 1]
+            self.set_block_size(int(blksize))
+            print '%s: sending options ack' % now
+            self._tftp_options_ack(addr)
+        elif pkt.startswith(self._tftp_rrq_prefix):
             print '%s: starting transfer' % now
             self._tftp_maybe_send(0, addr)
         elif pkt.startswith(self._TFTP_ACK_PREFIX):
@@ -112,6 +130,9 @@ class Server(object):
         else:
             print '%s: received unexpected tftp bytes %r from %s:%d' % (
                 now, pkt.encode('hex'), addr[0], addr[1])
+    def _tftp_options_ack(self, addr):
+        pkt = (struct.pack('>H', self._TFTP_OPCODE_OACK) + 'blksize' + '\x00' + str(self.BLOCK_SIZE) + '\x00')
+        self._tftp_sock.sendto(pkt, addr)
 
     def _tftp_maybe_send(self, prev_block, addr):
         block = prev_block + 1
