@@ -23,6 +23,9 @@ class TftpdTest(unittest.TestCase):
                  'timeout\x005\x00'                         # RFC 2349 timeout = 5 seconds
                  'blksize\x00' + str(_BLOCK_SIZE) + '\x00')     # RFC 2348 block size = 1458
 
+    _TEST_RRQ_DEFAULT_BLKSIZE = ('\x00\x01digicap.dav\x00'                  # request file digicap.dav
+                 'octet\x00')                                # mode octet
+
     _LARGE_BUFFER_SIZE = 65536
 
     _BLKSIZE_OPTION = 'blksize\x00' + str(_BLOCK_SIZE) + '\x00'
@@ -168,6 +171,26 @@ class TftpdTest(unittest.TestCase):
 
         # OACK ACK
         self._tftp_client.send('\x00\x04\x00\x00')
+        self._server._iterate()
+        pkt = self._tftp_client.recv(self._LARGE_BUFFER_SIZE)
+        self.assertEqual('\x00\x03\x00\x01' + data, pkt)
+
+        # Second packet (empty).
+        self._tftp_client.send('\x00\x04\x00\x01')
+        self._server._iterate()
+        pkt = self._tftp_client.recv(self._LARGE_BUFFER_SIZE)
+        self.assertEqual('\x00\x03\x00\x02', pkt)
+
+        # No more packets.
+        self._tftp_client.send('\x00\x04\x00\x02')
+        self._server._iterate()
+        self._assert_no_data()
+
+    def test_full_block_default_blksize(self):
+        blocksize = 512
+        data = 'x' * blocksize
+        self._setup(data)
+        self._tftp_client.send(self._TEST_RRQ_DEFAULT_BLKSIZE)
         self._server._iterate()
         pkt = self._tftp_client.recv(self._LARGE_BUFFER_SIZE)
         self.assertEqual('\x00\x03\x00\x01' + data, pkt)
