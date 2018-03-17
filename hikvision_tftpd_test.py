@@ -21,10 +21,10 @@ class TftpdTest(unittest.TestCase):
     _TEST_RRQ = ('\x00\x01digicap.dav\x00'                  # request file digicap.dav
                  'octet\x00'                                # mode octet
                  'timeout\x005\x00'                         # RFC 2349 timeout = 5 seconds
-                 'blksize\x00' + str(_BLOCK_SIZE) + '\x00')     # RFC 2348 block size = 1458
+                 'blksize\x00' + str(_BLOCK_SIZE) + '\x00') # RFC 2348 block size = 1458
 
-    _TEST_RRQ_DEFAULT_BLKSIZE = ('\x00\x01digicap.dav\x00'                  # request file digicap.dav
-                 'octet\x00')                                # mode octet
+    _TEST_RRQ_DEFAULT_BLKSIZE = ('\x00\x01digicap.dav\x00'  # request file digicap.dav
+                 'octet\x00')                               # mode octet
 
     _LARGE_BUFFER_SIZE = 65536
 
