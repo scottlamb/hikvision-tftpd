@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
 Unbrick a Hikvision device. See README.md for usage information.
 """
