@@ -2,7 +2,7 @@ Unbrick a Hikvision device. Use as follows:
 
 Setup the expected IP address:
 
-    linux$ sudo ifconfig eth0:0 192.0.0.128
+    linux$ sudo ip addr add 192.0.0.128/24 dev enp4s0
     osx$   sudo ifconfig en0 alias 192.0.0.128 255.255.255.0
 
 Download the firmware to use:
@@ -35,7 +35,15 @@ there are two known configurations:
 
 This program defaults to the former. The latter requires commandline overrides:
 
-    $ sudo ./hikvision_tftp.py --server-ip=172.9.18.80 --filename=digicap.mav
+```bash
+sudo ./hikvision_tftp.py --server-ip=192.0.0.128 --filename=digicap.dav
+```
+
+OR
+
+```bash
+sudo ./hikvision_tftp.py --server-ip=172.9.18.80 --filename=digicap.mav
+```
 
 If nothing happens when your device restarts, your device may be expecting
 another IP address. tcpdump may be helpful in diagnosing this:

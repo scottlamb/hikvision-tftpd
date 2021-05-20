@@ -55,10 +55,10 @@ class Server(object):
                 raise Error(
                     ('Address %s:%d not available.\n\n'
                      'Try running:\n'
-                     'linux$ sudo ifconfig eth0:0 %s\n'
+                     'linux$ sudo ip addr add 192.0.0.128/24 dev enp4s0 %s\n'
                      'osx$   sudo ifconfig en0 alias %s '
                      '255.255.255.0\n\n'
-                     '(adjust eth0 or en0 to taste. see "ifconfig -a" output)')
+                     '(adjust eth0 or en0 to taste. see "ip addr" output)')
                     % (addr[0], addr[1], addr[0], addr[0]))
             if e.errno == errno.EADDRINUSE:
                 raise Error(
